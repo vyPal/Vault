@@ -4,6 +4,21 @@
 		<meta charset="utf-8" />
 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<style>
+@font-face {
+  font-family: AveiTypeSans;
+  src: url(AveiTypeSans.ttf) format('truetype');
+}
+
+:root {
+	--font-sans: 'AveiTypeSans', sans-serif;
+	--font-mono: 'AveiTypeSans', monospace;
+}
+
+html {
+	font-family: var(--font-sans);
+}
+		</style>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
