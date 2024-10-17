@@ -12,6 +12,7 @@
   },
   "devDependencies": {
     "@fontsource/fira-mono": "^5.0.0",
+    "@iconify/svelte": "^4.0.2",
     "@neoconfetti/svelte": "^2.0.0",
     "@sveltejs/adapter-auto": "^3.0.0",
     "@sveltejs/kit": "^2.0.0",
@@ -26,6 +27,7 @@
   "type": "module",
   "dependencies": {
     "@auth/sveltekit": "^1.7.0",
+    "@svelte-put/avatar": "^3.0.1",
     "@svelteuidev/composables": "^0.15.7",
     "@svelteuidev/core": "^0.15.7"
   }

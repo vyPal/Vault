@@ -1,23 +1,17 @@
-<script>
+<script lang="ts">
 	import { SvelteUIProvider, AppShell, Navbar, Header } from '@svelteuidev/core';
 	import HeadContent from './HeadContent.svelte';
-	import NavContent from './NavContent.svelte';
+
+	import type { LayoutData } from './$types';
+	
+	export let data: LayoutData;
 </script>
 
 <SvelteUIProvider withGlobalStyles themeObserver={'dark'}>
 	<AppShell>
-		<Navbar slot="navbar"
-			width={{
-			sm: 200,
-
-			lg: 250,
-
-			base: 100
-			}}
-		>
-			<NavContent />
+		<Navbar slot="navbar" fixed position={{ top: 90, left: 15 }} width={{base: 0, sm: 0, lg: 0}} hidden={true}>
 		</Navbar>
-		<Header slot="header" height=75>
+		<Header slot="header" height=75 fixed position={{ top: 15, left: 15, right: 15 }}>
 			<HeadContent />
 		</Header>
 

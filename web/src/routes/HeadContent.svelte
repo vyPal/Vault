@@ -1,10 +1,26 @@
 <script lang="ts">
-   import { signIn } from "@auth/sveltekit/client"
+   import { signOut } from "@auth/sveltekit/client"
+   import { Menu } from "@svelteuidev/core";
+   import { page } from "$app/stores"
+   import Avatar from '@svelte-put/avatar/Avatar.svelte';
+   import { SignIn } from "@auth/sveltekit/components";
 </script>
 
 <img src="Mimlex.png" alt="Mimlex logo" width="50" style="display: inline-block;"/>
 <h1 style="display: inline-block; position: relative; top: -15px; ">Mimlex <span style="background: -webkit-linear-gradient(#ddd, #333); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Vault</span></h1>
 
 <div style="float: right;">
-	<button on:click={signIn} style="background: #333; color: #ddd; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">Sign In</button>
+   <Menu>
+      <Avatar size={50} uiAvatar={$page.data.session?.user?.name ?? undefined} slot="control" style="border-radius: 50%;"/>
+      {#if $page.data.session}
+         <Menu.Label>{$page.data.session?.user?.name}</Menu.Label>
+         <Menu.Item on:click={() => signOut()}>Sign Out</Menu.Item>
+      {:else}
+         <SignIn provider="authentik" className="signinform" signInPage="signin">
+            <div slot="submitButton">
+               <Menu.Item>Sign In</Menu.Item>
+				    </div>
+				</SignIn>
+      {/if}
+   </Menu>
 </div>
