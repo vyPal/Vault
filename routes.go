@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ func SetupRoutes(g *gin.Engine) {
 	e.POST("/upload/*path", HandleFileUpload)
 	e.DELETE("/delete/*path", HandleFileDelete)
 	e.GET("/list/*path", HandleFileList)
+	e.GET("/listclients", HandleListApps)
 	// TODO: Implement file sharing
 }
 
@@ -142,7 +144,8 @@ func HandleFileList(c *gin.Context) {
 		return
 	}
 	if !HasAccess(token, AccessType(LIST)) {
-		c.String(403, "You do not have permission to write to this file")
+		fmt.Println(token.Scope)
+		c.String(403, "You do not have permission to list files in this directory")
 		return
 	}
 	if !strings.HasSuffix(filePath, "/") && filePath != "" {
@@ -165,6 +168,33 @@ func HandleFileList(c *gin.Context) {
 	}
 
 	c.JSON(200, files)
+}
+
+func HandleListApps(c *gin.Context) {
+	t, _ := c.Get("tokenData")
+	token := t.(TokenData)
+	if !HasAccess(token, AccessType(ALL)) {
+		c.String(403, "You do not have permission to list clients")
+		return
+	}
+	clients := []string{}
+	for object := range minioClient.ListObjects(context.Background(), os.Getenv("MINIO_BUCKET"), minio.ListObjectsOptions{
+		Prefix: token.Sub + "/",
+	}) {
+		if object.Err != nil {
+			fmt.Println(object.Err)
+			return
+		}
+		parts := strings.Split(object.Key, "/")
+		if len(parts) < 3 {
+			continue
+		}
+		client := parts[1]
+		if !slices.Contains(clients, client) {
+			clients = append(clients, client)
+		}
+	}
+	c.JSON(200, clients)
 }
 
 func HealthCheck(c *gin.Context) {

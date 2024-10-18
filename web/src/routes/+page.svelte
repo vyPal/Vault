@@ -10,7 +10,7 @@
 		<h1 style="display: inline-block; position: relative; top: -15px; font-size: 72px;">Mimlex <span style="background: -webkit-linear-gradient(#ddd, #333); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Vault</span> <Icon icon="material-symbols-light:shield-lock-rounded" width="64" height="64" /></h1>
 		<p>Your secure cloud storage</p>
 		{#if $page.data.session != null}
-			<Button variant="default" style="width: 100%; left: auto; right: auto;">Take me there <Icon icon="material-symbols:keyboard-arrow-right" width="24px"/></Button>
+			<a href="home"><Button variant="default" style="width: 100%; left: auto; right: auto;">Take me there <Icon icon="material-symbols:keyboard-arrow-right" width="24px"/></Button></a>
 		{:else}
 			<div class="signinform">
 				<SignIn provider="authentik" className="signinform" signInPage="signin">

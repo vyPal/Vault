@@ -4,9 +4,11 @@ import Authentik from "@auth/sveltekit/providers/authentik"
 declare module "@auth/sveltekit" {
   interface Session {
     accessToken: string
+    username: string
   }
   interface JWT {
     accessToken: string
+    username: string
   }
 }
  
@@ -20,20 +22,21 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
   },
   callbacks: {
     async session({ session, token }) {
-      console.log(token)
       if (token.accessToken) {
         session.accessToken = token.accessToken
       }
-      console.log(session)
+      if (token.username) {
+        session.username = token.username
+      }
       return session
     },
-    async jwt({ token, account }) {
-      console.log(account)
+    async jwt({ token, account, profile }) {
       if (account) {
         token.accessToken = account.access_token
       }
-      console.log(token)
-      console.log("and then")
+      if (profile) {
+        token.username = profile.preferred_username
+      }
       return token
     }
   }
