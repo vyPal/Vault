@@ -4,6 +4,19 @@
 	import Icon from '@iconify/svelte';
 	export let data: PageData;
 
+	const mergeFiles = (files: any) => {
+		data.vaultFiles = data.vaultFiles.concat(files);
+		data.vaultFiles.sort((a, b) => {
+			if (isFolder(a) && !isFolder(b)) return -1;
+			if (!isFolder(a) && isFolder(b)) return 1;
+			return a.localeCompare(b);
+		});
+	}
+
+	const openFile = (path: string) => {
+		console.log(path);
+	}
+
 	const isFolder = (path: string) => path.endsWith('/');
 
 	const loadFolder = async (path: string, files: any) => {
@@ -11,6 +24,11 @@
 		console.log("f0",files);
 		files = files.concat(await fetch(`/files/list/${path}`).then(async res => res.json()));
 		console.log("f1",files);
+	}
+
+	const loadVaultFiles = async () => {
+		let newFiles = await fetch('/files/list').then(async res => res.json());
+		mergeFiles(newFiles);
 	}
 </script>
 
@@ -50,6 +68,43 @@
 				{/await}
 			</Paper>
 		{/each}
+		{#if data.clientlist.length === 0}
+			<Paper shadow="xl" radius="lg" style="background: var(--svelteui-colors-dark900); padding: 15px; margin-bottom: 20px; width: 250px;">
+				<h2 style="margin-top: 8px;">No apps found</h2>
+				<p>It looks like no apps have requested permission to store files on Mimlex Vault yet.</p>
+			</Paper>
+		{/if}
 	</Group>
 {/if}
+
+<h1 style="margin-top: 15px;">Files</h1>
+{#await data.vaultFiles}
+	<Skeleton height={8} radius="xl" />
+{:then files}
+	{#if files.error}
+		<Alert>{files.error}</Alert>
+	{:else}
+		<Group>
+			{#each files as file}
+				{#if isFolder(file.name)}
+					<Button variant="subtle" on:click={(_) => loadFolder(file.name, files)}>
+						<ThemeIcon color="blue" radius="xl" size="lg">
+							<Icon icon="material-symbols:folder-outline" width="17" height="17" />
+						</ThemeIcon>
+						<Text weight={500}>{file.name.split("/").slice(2).join("/")}</Text>
+					</Button>
+				{:else}
+					<Button variant="subtle" on:click={(_) => openFile(file.name)}>
+						<ThemeIcon color="gray" radius="xl" size="lg">
+							<Icon icon="mdi:file-outline" width="17" height="17" />
+						</ThemeIcon>
+						<Text>{file.name.split("/").slice(2).join("/")}</Text>
+					</Button>
+				{/if}
+			{/each}
+		</Group>
+	{/if}
+{:catch error}
+	<Alert>{error.message}</Alert>
+{/await}
 

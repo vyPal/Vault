@@ -16,11 +16,13 @@ export const load: PageServerLoad = async (event) => {
 			status: clientlist.status,
 			error: await clientlist.text(),
 			session: session,
-			clientlist: []
+			clientlist: [],
+			vaultFiles: []
 		};
 	}
 
-	const clients = await clientlist.json();
+	let clients = await clientlist.json();
+	clients = clients.filter((client: string) => client !== 'vault');
 	let nl = clients.map((client: string) => ({
 		name: client,
 		files: fetch(`http://localhost:8080/files/list/${session?.username}/${client}`, {
@@ -41,9 +43,25 @@ export const load: PageServerLoad = async (event) => {
 			}))
 	}));
 
+	let vaultFiles = fetch(`http://localhost:8080/files/list/${session?.username}/vault/`, {
+		method: 'GET',
+		headers: {
+			'Content-Type': 'application/json',
+			Authorization: 'Bearer ' + session?.accessToken
+		}
+	}).then(async (response) => {
+		if (response.status !== 200) {
+			throw new Error(await response.text());
+		}
+		return response.json();
+	}).catch((error) => ({
+		error: error.message
+	}));
+
 	return {
 		session: session,
 		clientlist: nl ?? [],
+		vaultFiles: vaultFiles,
 		error: null,
 		status: 200
 	};
