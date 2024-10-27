@@ -8,7 +8,7 @@ export const GET: RequestHandler = async (event) => {
 	}
 	let path = event.params.slug;
 
-	let res = await fetch('http://localhost:8080/files/list/' + path, {
+	let res = await fetch('http://localhost:8080/files/list/' + path + '/', {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',

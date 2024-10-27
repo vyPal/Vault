@@ -5,6 +5,7 @@
 	export let data: PageData;
 
 	const mergeFiles = (files: any) => {
+		console.log(files);
 		data.vaultFiles = data.vaultFiles.concat(files);
 		data.vaultFiles.sort((a, b) => {
 			if (isFolder(a) && !isFolder(b)) return -1;
@@ -30,8 +31,8 @@
 		console.log("f1",files);
 	}
 
-	const loadVaultFiles = async () => {
-		let newFiles = await fetch('/files/list').then(async res => res.json());
+	const loadVaultFiles = async (name) => {
+		let newFiles = await fetch('/files/list/'+name).then(async res => res.json());
 		mergeFiles(newFiles);
 	}
 </script>
@@ -91,7 +92,7 @@
 		<Group>
 			{#each files as file}
 				{#if isFolder(file.name)}
-					<Button variant="subtle" on:click={(_) => loadFolder(file.name, files)}>
+					<Button variant="subtle" on:click={(_) => loadVaultFiles(file.name)}>
 						<ThemeIcon color="blue" radius="xl" size="lg">
 							<Icon icon="material-symbols:folder-outline" width="17" height="17" />
 						</ThemeIcon>

@@ -61,7 +61,7 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		session: session,
 		clientlist: nl ?? [],
-		vaultFiles: vaultFiles,
+		vaultFiles: await vaultFiles,
 		error: null,
 		status: 200
 	};
