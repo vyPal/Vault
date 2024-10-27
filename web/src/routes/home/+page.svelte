@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Alert, Paper, Skeleton, Group, Button, Text, Stack, ThemeIcon } from '@svelteuidev/core';
+	import { Alert, Paper, Skeleton, Group, Button, Text, Stack, ThemeIcon, Modal } from '@svelteuidev/core';
 	import type { PageData } from './$types';
 	import Icon from '@iconify/svelte';
 	export let data: PageData;
@@ -14,8 +14,12 @@
 	}
 
 	const openFile = (path: string) => {
-		console.log(path);
+		fileModal = true;
+		fileModalSrc = `/files/get/${path}`;
 	}
+
+	let fileModal = false;
+	let fileModalSrc = "";
 
 	const isFolder = (path: string) => path.endsWith('/');
 
@@ -108,3 +112,12 @@
 	<Alert>{error.message}</Alert>
 {/await}
 
+<Modal opened={fileModal} on:close={() => fileModal = false} centered class="modal">
+	<img src={fileModalSrc} alt="Loading">
+</Modal>
+
+<style>
+	:global(.modal > div > div > div) {
+		width: auto !important;
+	}
+</style>
