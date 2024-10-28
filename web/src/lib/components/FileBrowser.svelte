@@ -2,13 +2,13 @@
   import { onMount } from "svelte";
   import { Alert, Text, Grid, ThemeIcon, Stack, Group, Paper, Breadcrumbs, Space, Button, Flex, NativeSelect, ChipGroup, Menu, Modal } from "@svelteuidev/core";
   import Icon from "@iconify/svelte";
-  import { Dropzone } from 'flowbite-svelte';
+  import DropFile from 'svelte-parts/DropFile.svelte'
 
   export let basePath: string = "/";
 
   let currentPath = basePath;
 
-  type File = {
+  type MyFile = {
     isFolder: boolean;
     name: string;
     extension: string;
@@ -19,7 +19,7 @@
     previewHtml: DynComponent;
   };
 
-  export let files: File[] = [];
+  export let files: MyFile[] = [];
 
   const getIcon = (ext: string) => {
     switch (ext) {
@@ -146,47 +146,6 @@
     fetchFiles(basePath);
   });
 
-  let value = [];
-  const dropHandle = (event) => {
-    value = [];
-    event.preventDefault();
-    if (event.dataTransfer.items) {
-      [...event.dataTransfer.items].forEach((item, i) => {
-        if (item.kind === 'file') {
-          const file = item.getAsFile();
-          value.push(file.name);
-          value = value;
-        }
-      });
-    } else {
-      [...event.dataTransfer.files].forEach((file, i) => {
-        value = file.name;
-      });
-    }
-  };
-
-  const handleChange = (event) => {
-    const files = event.target.files;
-    if (files.length > 0) {
-      value.push(files[0].name);
-      value = value;
-    }
-  };
-
-  const showFiles = (files) => {
-    if (files.length === 1) return files[0];
-    let concat = '';
-    files.map((file) => {
-      concat += file;
-      concat += ',';
-      concat += ' ';
-    });
-
-    if (concat.length > 40) concat = concat.slice(0, 40);
-    concat += '...';
-    return concat;
-  };
-
   type DynComponent = {
     type: "component";
     component: any;
@@ -199,7 +158,7 @@
     text: string;
   };
 
-  const openFile = (file: File) => {
+  const openFile = (file: MyFile) => {
     if (file.isFolder) {
       fetchFiles(file.fullPath);
       currentPath = file.fullPath;
@@ -232,7 +191,61 @@
   let viewType = "grid";
 
   let fileModal = false;
+
+  const onDrop = (files: File[]) => {
+    uploadFiles(files);
+    fileModal = false;
+  }
+
+  let uploadProgress: {[index: string]: number} = {};
+
+  async function uploadFiles(files: File[]) {
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      await uploadFileWithProgress(formData, file.name);
+    }
+  }
+
+  function uploadFileWithProgress(formData: FormData, filename: string) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/files/push/" + currentPath + filename);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          uploadProgress[filename] = (event.loaded / event.total) * 100;
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          delete uploadProgress[filename];
+          resolve("");
+        } else {
+          reject(xhr.statusText);
+        }
+      };
+      xhr.onerror = () => reject("Upload failed");
+      xhr.send(formData);
+    });
+  }
+
+  function handleDragEnter(event: DragEvent) {
+    event.preventDefault();
+    fileModal = true;
+  }
+
+  function handleDragLeave(event: DragEvent) {
+    event.preventDefault();
+    if (event.target === document.body) {
+      fileModal = false;
+    }
+  }
 </script>
+
+<svelte:window on:dragenter={handleDragEnter} on:dragleave={handleDragLeave} />
 
 <h1 style="margin-top: 15px;">Files</h1>
 
@@ -342,20 +355,6 @@
   {/if}
 {/if}
 
-<Modal opened={fileModal} on:close={(_) => {fileModal = false}}>
-  <Dropzone
-    id="dropzone"
-    on:drop={dropHandle}
-    on:dragover={(event) => {
-      event.preventDefault();
-    }}
-    on:change={handleChange}>
-    <svg aria-hidden="true" class="mb-3 w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-    {#if value.length === 0}
-      <p class="mb-2 text-sm text-gray-500 dark:text-gray-400"><span class="font-semibold">Click to upload</span> or drag and drop</p>
-      <p class="text-xs text-gray-500 dark:text-gray-400">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
-    {:else}
-      <p>{showFiles(value)}</p>
-    {/if}
-  </Dropzone>
+<Modal opened={fileModal} on:close={(_) => {fileModal = false}} centered size="85%">
+  <DropFile onDrop={onDrop} />  
 </Modal>
