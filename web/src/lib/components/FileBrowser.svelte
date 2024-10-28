@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Alert, Text, Grid, ThemeIcon, Stack, Group, Paper, Breadcrumbs, Space, Button, Flex, NativeSelect, ChipGroup, Menu, Modal } from "@svelteuidev/core";
+  import { Alert, Text, Grid, ThemeIcon, Stack, Group, Paper, Breadcrumbs, Space, Button, Flex, NativeSelect, ChipGroup, Menu, Modal, Affix, Notification, Progress } from "@svelteuidev/core";
   import Icon from "@iconify/svelte";
   import DropFile from 'svelte-parts/DropFile.svelte'
 
@@ -243,6 +243,17 @@
       fileModal = false;
     }
   }
+
+  function formatBytes(bytes: number, decimals = 1) {
+    if (bytes === 0) return '0 Bytes';
+    
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    const formattedSize = parseFloat((bytes / Math.pow(k, i)).toFixed(decimals));
+    return `${formattedSize} ${sizes[i]}`;
+  }
 </script>
 
 <svelte:window on:dragenter={handleDragEnter} on:dragleave={handleDragLeave} />
@@ -297,7 +308,7 @@
     <Grid>
       {#each files as file}
         <button style="background: none; margin: 5px; padding: 0; border: 0;" on:click={(_) => openFile(file)}>
-          <Paper shadow="xl" radius="lg" style="background: var(--svelteui-colors-dark900); padding: 15px;">
+          <Paper shadow="xl" radius="lg" style="background: var(--svelteui-colors-dark900); padding: 15px; max-width: 250px; max-height: 160;">
             <div style="width: 220px; height: 100px; display: flex; justify-content: center;">
               {#if file.previewHtml.type === 'component'}
                 {@const DynamicComponent = file.previewHtml.component}
@@ -344,7 +355,7 @@
                   <Text>{file.name}</Text>
                 </Group>
                 <Space h={12} />
-                <Text size="sm" color="gray">{file.size} bytes</Text>
+                <Text size="sm" color="gray">{formatBytes(file.size)}</Text>
                 <Text size="sm" color="gray">{new Date(file.lastModified).toLocaleString()}</Text>
               </Stack>
             </Group>
@@ -358,3 +369,14 @@
 <Modal opened={fileModal} on:close={(_) => {fileModal = false}} centered size="85%">
   <DropFile onDrop={onDrop} />  
 </Modal>
+
+<Affix position={{ bottom: 20, right: 20 }}>
+  {#each Object.keys(uploadProgress) as filename}
+    <Notification title="Upload Progress" loading={uploadProgress[filename] != 100} color="green">
+      <Stack>
+        <Text>{filename}</Text>
+        <Progress value={uploadProgress[filename]} />
+      </Stack>
+    </Notification>
+  {/each}
+</Affix>
