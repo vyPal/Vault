@@ -29,6 +29,8 @@
     "@auth/sveltekit": "^1.7.0",
     "@svelte-put/avatar": "^3.0.1",
     "@svelteuidev/composables": "^0.15.7",
-    "@svelteuidev/core": "^0.15.7"
+    "@svelteuidev/core": "^0.15.7",
+    "flowbite": "^2.5.2",
+    "flowbite-svelte": "^0.47.2"
   }
 }
