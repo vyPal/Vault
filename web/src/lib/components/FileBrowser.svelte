@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Alert, Text, Grid, ThemeIcon, Stack, Group, Paper, Breadcrumbs, Space, Button, Flex, NativeSelect, ChipGroup, Menu, Modal, Affix, Notification, Progress } from "@svelteuidev/core";
+  import { Alert, Text, Grid, ThemeIcon, Stack, Group, Paper, Breadcrumbs, Space, Button, Flex, NativeSelect, ChipGroup, Menu, Modal, Affix, Notification, Progress, Portal, Skeleton, ActionIcon } from "@svelteuidev/core";
   import Icon from "@iconify/svelte";
   import DropFile from 'svelte-parts/DropFile.svelte'
+  import JSZip from "jszip";
 
   export let basePath: string = "/";
 
@@ -62,6 +63,7 @@
   }
 
   const getPreview = (name: string, ext: string) => {
+    console.log(name, ext);
     switch (ext) {
       case "pdf":
         return {
@@ -92,14 +94,37 @@
           type: "html",
           html: `<video src="/files/get/${name}" controls style="height: 100%;"></video>`
         }
+      case "zip":
+        return {
+          type: "html-promise",
+          promise: fetch(`/files/get/${name}`).then(response => { 
+            if (response.status === 200 || response.status === 0) {
+              return Promise.resolve(response.blob());
+            } else {
+              return Promise.reject(new Error(response.statusText));
+            }
+          }).then(JSZip.loadAsync).then(zip => {
+            const fileTree: string[] = [];
+
+            zip.forEach((_, zipEntry) => {
+              fileTree.push(zipEntry.name);
+            });
+
+            return `<ul>${fileTree.map(file => `<li>${file}</li>`).join('')}</ul>`;
+          })
+          .catch(error => {
+            console.error("Error loading zip file:", error);
+            return `<p>Error loading zip file: ${error.message}</p>`
+          })
+        }
       default:
         return {
           type: "component",
           component: Icon,
           props: {
             icon: getIcon(ext),
-            width: "82",
-            height: "82"
+            width: "80%",
+            height: "80%"
           }
         }
     }
@@ -156,14 +181,17 @@
   } | {
     type: "text";
     text: string;
-  };
+  } | {
+    type: "html-promise";
+    promise: Promise<string>;
+  }
 
   const openFile = (file: MyFile) => {
     if (file.isFolder) {
       fetchFiles(file.fullPath);
       currentPath = file.fullPath;
     } else {
-      // Placeholder
+      fileDetails = file;
     }
   }
 
@@ -254,6 +282,8 @@
     const formattedSize = parseFloat((bytes / Math.pow(k, i)).toFixed(decimals));
     return `${formattedSize} ${sizes[i]}`;
   }
+
+  let fileDetails: MyFile | null = null;
 </script>
 
 <svelte:window on:dragenter={handleDragEnter} on:dragleave={handleDragLeave} />
@@ -308,19 +338,25 @@
     <Grid>
       {#each files as file}
         <button style="background: none; margin: 5px; padding: 0; border: 0;" on:click={(_) => openFile(file)}>
-          <Paper shadow="xl" radius="lg" style="background: var(--svelteui-colors-dark900); padding: 15px; max-width: 250px; max-height: 160;">
-            <div style="width: 220px; height: 100px; display: flex; justify-content: center;">
+          <Paper shadow="xl" radius="lg" style="background: var(--svelteui-colors-dark900); padding: 15px; max-width: 250px;">
+            <div style="width: 220px; height: 100px; display: flex; justify-content: center; overflow: hidden;">
               {#if file.previewHtml.type === 'component'}
                 {@const DynamicComponent = file.previewHtml.component}
                 <DynamicComponent {...file.previewHtml.props} />
               {:else if file.previewHtml.type === 'html'}
                 {@html file.previewHtml.html}
+              {:else if file.previewHtml.type === 'html-promise'}
+                {#await file.previewHtml.promise}
+                  <Skeleton />
+                {:then html} 
+                  {@html html}
+                {/await}
               {:else if file.previewHtml.type === 'text'}
                 <Text>{file.previewHtml.text}</Text>
               {/if}
             </div>
             <Space h={12} />
-            <Group>
+            <Group noWrap>
               <ThemeIcon color="gray" radius="xl" size="lg">
                 <Icon icon={file.icon} width="17" height="17" />
               </ThemeIcon>
@@ -336,12 +372,18 @@
         <button style="background: none; margin: 5px; padding: 0; border: 0;" on:click={(_) => openFile(file)}>
           <Paper shadow="xl" radius="lg" style="background: var(--svelteui-colors-dark900); padding: 15px;">
             <Group>
-              <div style="width: 220px; height: 100px; display: flex; justify-content: center;">
+              <div style="width: 220px; height: 100px; display: flex; justify-content: center; overflow: hidden;">
                 {#if file.previewHtml.type === 'component'}
                   {@const DynamicComponent = file.previewHtml.component}
                   <DynamicComponent {...file.previewHtml.props} />
                 {:else if file.previewHtml.type === 'html'}
                   {@html file.previewHtml.html}
+                {:else if file.previewHtml.type === 'html-promise'}
+                  {#await file.previewHtml.promise}
+                    <Skeleton />
+                  {:then html} 
+                    {@html html}
+                  {/await}
                 {:else if file.previewHtml.type === 'text'}
                   <Text>{file.previewHtml.text}</Text>
                 {/if}
@@ -369,6 +411,43 @@
 <Modal opened={fileModal} on:close={(_) => {fileModal = false}} centered size="85%">
   <DropFile onDrop={onDrop} />  
 </Modal>
+
+{#if fileDetails}
+  <Portal target="#aside">
+    <Paper shadow="xl" radius="lg" style="background: var(--svelteui-colors-dark900); padding: 25px; width: 25vw; margin-left: 30px;" >
+      <div style="width: calc(25vw - 50px); height: 250px; display: flex; justify-content: center; overflow: hidden;">
+        {#if fileDetails.previewHtml.type === 'component'}
+          {@const DynamicComponent = fileDetails.previewHtml.component}
+          <DynamicComponent {...fileDetails.previewHtml.props} />
+        {:else if fileDetails.previewHtml.type === 'html'}
+          {@html fileDetails.previewHtml.html}
+        {:else if fileDetails.previewHtml.type === 'html-promise'}
+          {#await fileDetails.previewHtml.promise}
+            <Skeleton />
+          {:then html} 
+            {@html html}
+          {/await}
+        {:else if fileDetails.previewHtml.type === 'text'}
+          <Text>{fileDetails.previewHtml.text}</Text>
+        {/if}
+      </div>
+      <Space h={24} />
+      <Group>
+        <h1>{fileDetails.name}</h1>
+        <ActionIcon color="gray" radius="xl" size="lg" variant="light">
+          <Icon icon="ph:download" width="17" height="17" />
+        </ActionIcon>
+        <ActionIcon color="red" size="lg" radius="xl" variant="light">
+          <Icon icon="ph:trash" width="17" height="17" />
+        </ActionIcon>
+      </Group>
+      <Space h={24} />
+      <Text size="lg" color="gray">{formatBytes(fileDetails.size)}</Text>
+      <Space h={8} />
+      <Text size="lg" color="gray">{new Date(fileDetails.lastModified).toLocaleString()}</Text>
+    </Paper>
+  </Portal>
+{/if}
 
 <Affix position={{ bottom: 20, right: 20 }}>
   {#each Object.keys(uploadProgress) as filename}

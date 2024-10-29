@@ -30,6 +30,7 @@
     "@svelte-put/avatar": "^3.0.1",
     "@svelteuidev/composables": "^0.15.7",
     "@svelteuidev/core": "^0.15.7",
+    "jszip": "^3.10.1",
     "svelte-parts": "^0.0.6"
   }
 }
