@@ -81,8 +81,9 @@ func HandleFileDownload(c *gin.Context) {
 		c.String(403, "You do not have permission to read this file")
 		return
 	}
+	fileName := strings.Split(filePath, "/")[len(strings.Split(filePath, "/"))-1]
 	reqParams := make(url.Values)
-	reqParams.Set("response-content-disposition", "attachment; filename=\"your-filename.txt\"")
+	reqParams.Set("response-content-disposition", "attachment; filename=\"" + fileName + "\"")
 	url, err := minioClient.PresignedGetObject(context.Background(), os.Getenv("MINIO_BUCKET"), user+"/"+client+"/"+filePath, time.Duration(15*time.Minute), reqParams)
 	if err != nil {
 		c.String(500, "Error generating presigned URL: %s", err)
