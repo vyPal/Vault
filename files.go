@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
+	"os"
 	"strings"
 	"time"
+
+	"github.com/minio/minio-go/v7"
 )
 
 type AccessType int
@@ -37,4 +41,15 @@ func HasAccess(token TokenData, access AccessType) bool {
 	}
 
 	return false
+}
+
+func GetFolderSize(path string) (int64, error) {
+	var size int64
+	for objeft := range minioClient.ListObjects(context.Background(), os.Getenv("MINIO_BUCKET"), minio.ListObjectsOptions{Prefix: path, Recursive: true, WithVersions: true}) {
+		if objeft.Err != nil {
+			return 0, objeft.Err
+		}
+		size += objeft.Size
+	}
+	return size, nil
 }

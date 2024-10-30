@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { Alert, Text, Grid, ThemeIcon, Stack, Group, Paper, Breadcrumbs, Space, Button, Flex, NativeSelect, ChipGroup, Menu, Modal, Affix, Notification, Progress, Portal, Skeleton, ActionIcon } from "@svelteuidev/core";
+  import { Alert, Text, Grid, ThemeIcon, Stack, Group, Paper, Breadcrumbs, Space, Button, Flex, NativeSelect, ChipGroup, Menu, Modal, Affix, Notification, Progress, Portal, Skeleton, ActionIcon, TextInput, Tooltip } from "@svelteuidev/core";
   import Icon from "@iconify/svelte";
   import DropFile from 'svelte-parts/DropFile.svelte'
   import JSZip from "jszip";
@@ -63,7 +63,6 @@
   }
 
   const getPreview = (name: string, ext: string) => {
-    console.log(name, ext);
     switch (ext) {
       case "pdf":
         return {
@@ -133,7 +132,7 @@
   const fetchFiles = async (path: string) => {
     currentPath = path;
     let nf = await fetch(`/files/list/${path}`).then(async (res) => res.json()).catch((e) => console.error(e));
-    files = nf.map((file: any) => {
+    files = nf.filter((file:any) => file.name != path).map((file: any) => {
       if (file.name.endsWith("/")) {
         return {
           isFolder: true,
@@ -186,8 +185,8 @@
     promise: Promise<string>;
   }
 
-  const openFile = (file: MyFile) => {
-    if (file.isFolder) {
+  const openFile = (file: MyFile, doubleclick: boolean = false) => {
+    if (file.isFolder && doubleclick) {
       fetchFiles(file.fullPath);
       currentPath = file.fullPath;
     } else {
@@ -219,6 +218,8 @@
   let viewType = "grid";
 
   let fileModal = false;
+  let folderModal = false;
+  let fname = "New Folder";
 
   const onDrop = (files: File[]) => {
     uploadFiles(files);
@@ -233,6 +234,7 @@
       formData.append("file", file);
 
       await uploadFileWithProgress(formData, file.name);
+      fetchFiles(currentPath);
     }
   }
 
@@ -284,11 +286,50 @@
   }
 
   let fileDetails: MyFile | null = null;
+
+  async function download(name: string, path: string) {
+    let res = await fetch(`/files/get/${path}`, {
+		  method: 'GET',
+	  });
+
+	  let blob = await res.blob();
+	  var url = window.URL || window.webkitURL;
+	  let link = url.createObjectURL(blob);
+
+	  let a = document.createElement("a");
+	  a.setAttribute("download", name);
+	  a.setAttribute("href", link);
+	  document.body.appendChild(a);
+	  a.click();
+	  document.body.removeChild(a);
+  }
+
+  async function deleteFile(path: string) {
+    let res = await fetch(`/files/delete/${path}?folder=${path.endsWith('/')}`, {
+      method: 'DELETE',
+    });
+
+    if (res.status === 200) {
+      if (fileDetails?.fullPath === path) {
+        fileDetails = null;
+      }
+      fetchFiles(currentPath);
+    }
+  }
+
+  async function createFolder(name: string) {
+    let res = await fetch(`/files/push/${currentPath}${name}`, {
+      method: 'POST',
+      body: new FormData(),
+    });
+
+    if (res.status === 200) {
+      fetchFiles(currentPath);
+    }
+  }
 </script>
 
 <svelte:window on:dragenter={handleDragEnter} on:dragleave={handleDragLeave} />
-
-<h1 style="margin-top: 15px;">Files</h1>
 
 <Flex justify="space-between">
   <Group>
@@ -321,9 +362,9 @@
   </Group>
   <Group>
     <Menu>
-      <Button slot="control" variant="default">Upload</Button>
-      <Menu.Item on:click={(_) => {fileModal = true}}>Upload File</Menu.Item>
-      <Menu.Item>Upload Folder</Menu.Item>
+      <Button slot="control" variant="default">New</Button>
+      <Menu.Item on:click={(_) => {fileModal = true}}>Upload</Menu.Item>
+      <Menu.Item on:click={(_) => {folderModal = true}}>Folder</Menu.Item>
     </Menu>
     <NativeSelect data={['Name A-Z', 'Name Z-A', 'Size Asc', 'Size Desc', 'Date Asc', 'Date Desc']} bind:value={sortBy} />
     <ChipGroup variant="filled" bind:value={viewType} items={[{label: "Grid", value: "grid"}, {label: "List", value: "list"}]} />
@@ -337,7 +378,7 @@
   {#if viewType === "grid"}
     <Grid>
       {#each files as file}
-        <button style="background: none; margin: 5px; padding: 0; border: 0;" on:click={(_) => openFile(file)}>
+        <button style="background: none; margin: 5px; padding: 0; border: 0;" on:click={(_) => openFile(file)} on:dblclick={(_) => {openFile(file, true)}}>
           <Paper shadow="xl" radius="lg" style="background: var(--svelteui-colors-dark900); padding: 15px; max-width: 250px;">
             <div style="width: 220px; height: 100px; display: flex; justify-content: center; overflow: hidden;">
               {#if file.previewHtml.type === 'component'}
@@ -347,7 +388,7 @@
                 {@html file.previewHtml.html}
               {:else if file.previewHtml.type === 'html-promise'}
                 {#await file.previewHtml.promise}
-                  <Skeleton />
+                  <Skeleton radius="lg" />
                 {:then html} 
                   {@html html}
                 {/await}
@@ -360,7 +401,9 @@
               <ThemeIcon color="gray" radius="xl" size="lg">
                 <Icon icon={file.icon} width="17" height="17" />
               </ThemeIcon>
-              <Text>{file.name}</Text>
+              <Tooltip label={file.name} openDelay={500} position="bottom" placement="center" gutter={10} color="dark">
+                <Text style="max-height: 32px; max-width: 160px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">{file.name}</Text>
+              </Tooltip>
             </Group>
           </Paper>
         </button>
@@ -369,7 +412,7 @@
   {:else if viewType === "list"}
     <Stack spacing="xs">
       {#each files as file}
-        <button style="background: none; margin: 5px; padding: 0; border: 0;" on:click={(_) => openFile(file)}>
+        <button style="background: none; margin: 5px; padding: 0; border: 0;" on:click={(_) => openFile(file)} on:dblclick={(_) => {openFile(file, true)}}>
           <Paper shadow="xl" radius="lg" style="background: var(--svelteui-colors-dark900); padding: 15px;">
             <Group>
               <div style="width: 220px; height: 100px; display: flex; justify-content: center; overflow: hidden;">
@@ -380,7 +423,7 @@
                   {@html file.previewHtml.html}
                 {:else if file.previewHtml.type === 'html-promise'}
                   {#await file.previewHtml.promise}
-                    <Skeleton />
+                    <Skeleton radius="lg" />
                   {:then html} 
                     {@html html}
                   {/await}
@@ -394,7 +437,9 @@
                   <ThemeIcon color="gray" radius="xl" size="lg">
                     <Icon icon={file.icon} width="17" height="17" />
                   </ThemeIcon>
-                  <Text>{file.name}</Text>
+                  <Tooltip label={file.name} openDelay={500} position="bottom" placement="center" gutter={10} color="dark">
+                    <Text>{file.name}</Text>
+                  </Tooltip>
                 </Group>
                 <Space h={12} />
                 <Text size="sm" color="gray">{formatBytes(file.size)}</Text>
@@ -412,6 +457,12 @@
   <DropFile onDrop={onDrop} />  
 </Modal>
 
+<Modal opened={folderModal} on:close={(_) => {folderModal = false}} centered title="New folder">
+  <TextInput placeholder="Folder name" label="Folder name" required bind:value={fname}/>
+  <Space h={12} />
+  <Button variant="default" on:click={async (_) => {await createFolder(fname); folderModal = false; fetchFiles(currentPath)}}>Create</Button>
+</Modal>
+
 {#if fileDetails}
   <Portal target="#aside">
     <Paper shadow="xl" radius="lg" style="background: var(--svelteui-colors-dark900); padding: 25px; width: 25vw; margin-left: 30px;" >
@@ -423,7 +474,7 @@
           {@html fileDetails.previewHtml.html}
         {:else if fileDetails.previewHtml.type === 'html-promise'}
           {#await fileDetails.previewHtml.promise}
-            <Skeleton />
+            <Skeleton radius="lg" />
           {:then html} 
             {@html html}
           {/await}
@@ -434,10 +485,10 @@
       <Space h={24} />
       <Group>
         <h1>{fileDetails.name}</h1>
-        <ActionIcon color="gray" radius="xl" size="lg" variant="light">
+        <ActionIcon color="gray" radius="xl" size="lg" variant="light" on:click={(_) => {download(fileDetails?.name ?? '', fileDetails?.fullPath ?? '')}}>
           <Icon icon="ph:download" width="17" height="17" />
         </ActionIcon>
-        <ActionIcon color="red" size="lg" radius="xl" variant="light">
+        <ActionIcon color="red" size="lg" radius="xl" variant="light" on:click={(_) => {deleteFile(fileDetails?.fullPath ?? '')}}>
           <Icon icon="ph:trash" width="17" height="17" />
         </ActionIcon>
       </Group>

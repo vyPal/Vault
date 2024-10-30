@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { SERVER_URL } from '$env/static/private'
 
 export const GET: RequestHandler = async (event) => {
 	let user = await event.locals.auth();
@@ -8,7 +9,7 @@ export const GET: RequestHandler = async (event) => {
 	}
 	let path = event.params.slug;
 
-	let res = await fetch('http://localhost:8080/files/download/' + path, {
+	let res = await fetch(SERVER_URL + '/files/download/' + path, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',

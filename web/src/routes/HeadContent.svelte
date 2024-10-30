@@ -6,8 +6,9 @@
    import { SignIn } from "@auth/sveltekit/components";
 </script>
 
+<a href="/">
 <img src="Mimlex.png" alt="Mimlex logo" width="50" style="display: inline-block;"/>
-<h1 style="display: inline-block; position: relative; top: -15px; ">Mimlex <span style="background: -webkit-linear-gradient(#ddd, #333); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Vault</span></h1>
+<h1 style="display: inline-block; position: relative; top: -15px; color: white;">Mimlex <span style="background: -webkit-linear-gradient(#ddd, #333); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Vault</span></h1></a>
 
 <div style="float: right;">
    <Menu>

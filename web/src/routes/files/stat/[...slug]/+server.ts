@@ -2,26 +2,22 @@ import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { SERVER_URL } from '$env/static/private'
 
-export const POST: RequestHandler = async (event) => {
+export const GET: RequestHandler = async (event) => {
 	let user = await event.locals.auth();
 	if (!user) {
 		return error(401, 'Unauthorized');
 	}
 	let path = event.params.slug;
-	const formData: unknown = Object.fromEntries(await event.request.formData());
-	const { file } = formData as { file: File };
 	let query = '';
-	if (file === undefined) {
+	if (event.url.searchParams.get('folder') === 'true') {
 		query = '?folder=true';
 	}
-
-	let res = await fetch(SERVER_URL + '/files/upload/' + path + query , {
-		method: 'POST',
+	let res = await fetch(SERVER_URL + '/files/metadata/' + path + query, {
+		method: 'GET',
 		headers: {
-			'Content-Type': 'file',
+			'Content-Type': 'application/json',
 			Authorization: 'Bearer ' + user.accessToken
-		},
-		body: file
+		}
 	});
 
 	return new Response(res.body, res);

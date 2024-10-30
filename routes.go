@@ -24,6 +24,7 @@ func SetupRoutes(g *gin.Engine) {
 	e.DELETE("/delete/*path", HandleFileDelete)
 	e.GET("/list/*path", HandleFileList)
 	e.GET("/listclients", HandleListApps)
+	e.GET("/usage/*path", HandleFileUsage)
 	// TODO: Implement file sharing
 }
 
@@ -60,6 +61,9 @@ func HandleFileMetadata(c *gin.Context) {
 	if !HasAccess(token, AccessType(READ)) {
 		c.String(403, "You do not have permission to read this file")
 		return
+	}
+	if c.Query("folder") == "true" {
+		filePath += "/"
 	}
 	info, err := minioClient.StatObject(context.Background(), os.Getenv("MINIO_BUCKET"), user+"/"+client+"/"+filePath, minio.StatObjectOptions{})
 	if err != nil {
@@ -105,6 +109,18 @@ func HandleFileUpload(c *gin.Context) {
 		c.String(403, "You do not have permission to write to this file")
 		return
 	}
+	usage, err := GetFolderSize(user+"/"+client)
+	if err != nil {
+		c.String(500, "Error getting folder size: %s", err)
+		return
+	}
+	if usage > 1024*1024*1024*5 { // 5 GB
+		c.String(403, "You have exceeded your storage limit")
+		return
+	}
+	if c.Query("folder") == "true" {
+		filePath += "/"
+	}
 	url, err := minioClient.PresignedPutObject(context.Background(), os.Getenv("MINIO_BUCKET"), user+"/"+client+"/"+filePath, time.Duration(15*time.Minute))
 	if err != nil {
 		c.String(500, "Error generating presigned URL: %s", err)
@@ -126,6 +142,9 @@ func HandleFileDelete(c *gin.Context) {
 		c.String(403, "You do not have permission to write to this file")
 		return
 	}
+	if c.Query("folder") == "true" {
+		filePath += "/"
+	}
 	err := minioClient.RemoveObject(context.Background(), os.Getenv("MINIO_BUCKET"), user+"/"+client+"/"+filePath, minio.RemoveObjectOptions{
 		ForceDelete: true,
 	})
@@ -134,6 +153,43 @@ func HandleFileDelete(c *gin.Context) {
 		return
 	}
 	c.String(200, "File deleted")
+}
+
+func HandleFileUsage(c *gin.Context) {
+	t, _ := c.Get("tokenData")
+	token := t.(TokenData)
+	user, client, filePath := SplitPath(c.Param("path"))
+	pSplit := strings.Split(c.Param("path"), "/")
+	if len(pSplit) == 3 {
+		user = pSplit[1]
+		client = pSplit[2]
+	} else if len(pSplit) == 2 {
+		user = pSplit[1]
+	}
+	if !CanAccessFile(token, user, client, filePath) {
+		c.String(403, "You do not have permission to access this file")
+		return
+	}
+	if !HasAccess(token, AccessType(LIST)) {
+		c.String(403, "You do not have permission to list files in this directory")
+		return
+	}
+	if !strings.HasSuffix(filePath, "/") && filePath != "" {
+		filePath += "/"
+	}
+	path := user
+	if client != "" {
+		path += "/" + client
+	}
+	if filePath != "" {
+		path += "/" + filePath
+	}
+	size, err := GetFolderSize(path)
+	if err != nil {
+		c.String(500, "Error getting folder size: %s", err)
+		return
+	}
+	c.JSON(200, gin.H{"size": size})
 }
 
 func HandleFileList(c *gin.Context) {

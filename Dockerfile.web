@@ -1,0 +1,22 @@
+# Dockerfile.web
+# Use Bun to install dependencies and build the SvelteKit app
+FROM oven/bun:latest
+
+WORKDIR /web
+
+# Copy the SvelteKit source code
+COPY web/ .
+
+# Install dependencies and build the project
+RUN bun install
+RUN bun run build
+
+# Add the required line in the serverOptions object within index.js
+RUN sed -i '/serverOptions = {/a\ \ maxRequestBodySize: 1024*1024*1024*5,' ./build/index.js
+
+# Expose the port your SvelteKit app will use
+EXPOSE 3000
+
+# Start the application
+CMD ["bun", "./build/index.js"]
+

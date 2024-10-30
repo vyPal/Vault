@@ -1,9 +1,10 @@
 import type { PageServerLoad } from './$types';
+import { SERVER_URL } from '$env/static/private'
 
 export const load: PageServerLoad = async (event) => {
 	const session = await event.locals.auth();
 
-	let clientlist = await fetch('http://localhost:8080/files/listclients', {
+	let clientlist = await fetch(SERVER_URL + '/files/listclients', {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',
@@ -25,7 +26,7 @@ export const load: PageServerLoad = async (event) => {
 	clients = clients.filter((client: string) => client !== 'vault');
 	let nl = clients.map((client: string) => ({
 		name: client,
-		files: fetch(`http://localhost:8080/files/list/${session?.username}/${client}`, {
+		files: fetch(SERVER_URL + `/files/list/${session?.username}/${client}`, {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
@@ -43,7 +44,7 @@ export const load: PageServerLoad = async (event) => {
 			}))
 	}));
 
-	let vaultFiles = fetch(`http://localhost:8080/files/list/${session?.username}/vault/`, {
+	let vaultFiles = fetch(SERVER_URL + `/files/list/${session?.username}/vault/`, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',

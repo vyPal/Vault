@@ -9,7 +9,7 @@ export const GET: RequestHandler = async (event) => {
 	}
 	let path = event.params.slug;
 
-	let res = await fetch(SERVER_URL + '/files/list/' + path + '/', {
+	let res = await fetch(SERVER_URL + '/files/usage/' + path, {
 		method: 'GET',
 		headers: {
 			'Content-Type': 'application/json',

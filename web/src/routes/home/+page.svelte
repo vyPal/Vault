@@ -18,7 +18,7 @@
 	}
 </script>
 
-<h1 style="margin-top: 15px;">Apps</h1>
+<h1>Apps</h1>
 
 {#if data.error}
 	<Alert>{data.error}</Alert>
@@ -63,6 +63,7 @@
 	</Group>
 {/if}
 
+<h1 style="margin-top: 15px;">Files</h1>
 <FileBrowser basePath={data.session?.username + '/vault/'} />
 
 <Modal opened={fileModal} on:close={() => fileModal = false} centered class="modal">

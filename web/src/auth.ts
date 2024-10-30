@@ -19,6 +19,7 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
 				'https://mimlex.vypal.me/application/o/authorize/?scope=openid profile email phone address files:all files:read files:write files:list'
 		})
 	],
+	trustHost: true,
 	pages: {
 		signIn: '/signin',
 		signOut: '/'
